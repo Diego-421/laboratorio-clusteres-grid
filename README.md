@@ -17,4 +17,9 @@
    | Distribuido | 4 | 2,24 | 3,31 | 82,7 % |
    | 4 nodos con falla | 4 | 2,51 | 2,94 | 73,6 % |
 
-   Archivos: resultados.csv, corridas.csv, registro.txt, grafica_tiempos.png, capturas/
+   Archivos: resultados.csv, corridas.csv, registro.txt, grafica_tiempos.png, Capturas/
+
+   """
+        pip install matplotlib
+        python laboratorio_distribuido.py
+   """
