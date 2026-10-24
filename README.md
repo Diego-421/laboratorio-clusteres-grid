@@ -22,7 +22,7 @@ suben al repositorio) y crea los archivos de resultados.
 | Secuencial | 1 | 7,40 | 1,00 | 100 % |
 | Distribuido | 2 | 4,13 | 1,79 | 89,6 % |
 | Distribuido | 4 | 2,24 | 3,31 | 82,7 % |
-| 4 nodos con falla | 4 | 2,51 | 2,94 | 73,6 % |
+| 4 nodos con falla | 4 | 2,51 | 2,95 | 73,6 % |
 
 ## Archivos
 
