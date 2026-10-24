@@ -1,0 +1,5 @@
+escenario,nodos,tiempo_s,desv_tiempo_s,speedup,eficiencia,archivos,huella,verificacion
+Secuencial (1 equipo),1,7.3983,0.0788,1.0,1.0,1000,0f17e564b2ee4430,OK
+Distribuido 2 nodos,2,4.129,0.0793,1.7918,0.8959,1000,0f17e564b2ee4430,OK
+Distribuido 4 nodos,4,2.2367,0.0807,3.3076,0.8269,1000,0f17e564b2ee4430,OK
+4 nodos con falla (nodo 3),4,2.5121,0.0032,2.945,0.7363,1000,0f17e564b2ee4430,OK

@@ -1,0 +1,52 @@
+== Entorno de ejecucion ==
+Python: 3.13.15
+Sistema: Windows 11 (AMD64)
+Procesador: AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD
+Nucleos logicos (os.cpu_count): 12
+Matplotlib: 3.11.2
+
+Generando/ubicando 1000 archivos de 30,000 valores...
+Archivos listos: 1000
+
+== Secuencial (1 equipo) ==
+   corrida 1/3: 7.49 s
+   corrida 2/3: 7.38 s
+   corrida 3/3: 7.33 s
+   promedio: 7.40 s (+/- 0.08) | speedup 1.00 | eficiencia 100.0%
+   huella 0f17e564b2ee4430 | coincide con la secuencial: SI
+
+== Distribuido 2 nodos ==
+   corrida 1/3: 4.22 s
+   corrida 2/3: 4.10 s
+   corrida 3/3: 4.07 s
+   promedio: 4.13 s (+/- 0.08) | speedup 1.79 | eficiencia 89.6%
+   tareas completadas por nodo (ultima corrida): {0: 500, 1: 500}
+   huella 0f17e564b2ee4430 | coincide con la secuencial: SI
+
+== Distribuido 4 nodos ==
+   corrida 1/3: 2.18 s
+   corrida 2/3: 2.33 s
+   corrida 3/3: 2.20 s
+   promedio: 2.24 s (+/- 0.08) | speedup 3.31 | eficiencia 82.7%
+   tareas completadas por nodo (ultima corrida): {0: 250, 1: 250, 2: 250, 3: 250}
+   huella 0f17e564b2ee4430 | coincide con la secuencial: SI
+
+== 4 nodos con falla (nodo 3) ==
+   t=1.49s | nodo 3 CAIDO | 150 tareas reasignadas a nodos [0, 1, 2]
+   corrida 1/3: 2.52 s
+   t=1.46s | nodo 3 CAIDO | 150 tareas reasignadas a nodos [0, 1, 2]
+   corrida 2/3: 2.51 s
+   t=1.42s | nodo 3 CAIDO | 150 tareas reasignadas a nodos [0, 1, 2]
+   corrida 3/3: 2.51 s
+   promedio: 2.51 s (+/- 0.00) | speedup 2.95 | eficiencia 73.6%
+   tareas completadas por nodo (ultima corrida): {0: 300, 1: 300, 2: 300, 3: 100}
+   huella 0f17e564b2ee4430 | coincide con la secuencial: SI
+
+== Resumen ==
+Escenario                        Nodos  Tiempo(s)  Speedup   Efic.  Verif.
+Secuencial (1 equipo)                1       7.40     1.00  100.0%  OK
+Distribuido 2 nodos                  2       4.13     1.79   89.6%  OK
+Distribuido 4 nodos                  4       2.24     3.31   82.7%  OK
+4 nodos con falla (nodo 3)           4       2.51     2.94   73.6%  OK
+
+Archivos generados: resultados.csv, corridas.csv, grafica_tiempos.png, registro.txt
