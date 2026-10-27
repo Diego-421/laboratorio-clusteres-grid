@@ -23,18 +23,21 @@ FALLA_TRAS = 100        # tareas que alcanza a completar antes de caerse
 class Cancelado(Exception):
     pass
 # ---------------------------------------------------------------- datos
-def generar_archivos(n, lineas):
-    """Crea n archivos con 'lineas' valores normales (media 50, desv. 15)."""
+def generar_archivos(n, lineas, on_archivo=None, cancelar=None):
     directorio = Path(f"datos_{lineas}")
     directorio.mkdir(exist_ok=True)
     rutas = []
     for i in range(n):
+        if cancelar is not None and cancelar.is_set():
+            raise Cancelado()
         ruta = directorio / f"datos_{i:04d}.txt"
         if not ruta.exists():
-            rng = random.Random(SEMILLA + i)          # cada archivo es reproducible
+            rng = random.Random(SEMILLA + i)
             valores = (f"{rng.gauss(50, 15):.6f}" for _ in range(lineas))
             ruta.write_text("\n".join(valores), encoding="ascii")
         rutas.append(str(ruta))
+        if on_archivo and ((i + 1) % 10 == 0 or i + 1 == n):
+            on_archivo(i + 1, n)
     return rutas
 
 
@@ -63,13 +66,15 @@ def procesar_archivo(ruta):
 
 
 # ---------------------------------------------------------------- secuencial
-def ejecutar_secuencial(rutas, cancelar=None):
+def ejecutar_secuencial(rutas, cancelar=None, on_nodo=None):
     t0 = time.perf_counter()
     res = []
-    for r in rutas:
+    for i, r in enumerate(rutas):
         if cancelar is not None and cancelar.is_set():
             raise Cancelado()
         res.append(procesar_archivo(r))
+        if on_nodo and ((i + 1) % 10 == 0 or i + 1 == len(rutas)):
+            on_nodo(0, i + 1, len(rutas), False)
     return res, time.perf_counter() - t0
 
 
@@ -90,15 +95,17 @@ def nodo_trabajador(id_nodo, cola_tareas, cola_res, falla_tras=None):
         hechas += 1
 
 
-def ejecutar_distribuido(rutas, n_nodos=4, nodo_falla=None, falla_tras=None,on_evento=None, cancelar=None):
+def ejecutar_distribuido(rutas, n_nodos=4, nodo_falla=None, falla_tras=None,
+                         on_evento=None, on_nodo=None, cancelar=None):
     ctx = mp.get_context("spawn")
-    colas = [ctx.Queue() for _ in range(n_nodos)]          # una cola de tareas por nodo
-    cola_res = ctx.Queue()                                 # cola comun de resultados
+    colas = [ctx.Queue() for _ in range(n_nodos)]
+    cola_res = ctx.Queue()
     pendientes = {i: set() for i in range(n_nodos)}
-
-    for i, r in enumerate(rutas):                          # reparto circular inicial
+    for i, r in enumerate(rutas):
         colas[i % n_nodos].put(r)
         pendientes[i % n_nodos].add(r)
+    asignadas = {i: len(pendientes[i]) for i in range(n_nodos)}
+    hechas = {i: 0 for i in range(n_nodos)}
 
     procs = [ctx.Process(target=nodo_trabajador,
                          args=(i, colas[i], cola_res, falla_tras if i == nodo_falla else None))
@@ -107,39 +114,62 @@ def ejecutar_distribuido(rutas, n_nodos=4, nodo_falla=None, falla_tras=None,on_e
     t0 = time.perf_counter()
     for p in procs:
         p.start()
+    if on_nodo:
+        for i in range(n_nodos):
+            on_nodo(i, 0, asignadas[i], False)
 
     resultados, caidos, eventos = {}, set(), []
-    while len(resultados) < len(rutas):                    # recoleccion de resultados
-        try:
-            res = cola_res.get(timeout=0.2)
-            resultados.setdefault(res["archivo"], res)     # evita contar dos veces un archivo
-            pendientes[res["nodo"]].discard(res["archivo"])
-        except queue.Empty:
-            pass
-        for i, p in enumerate(procs):                      # deteccion de fallos
-            if i not in caidos and p.exitcode not in (None, 0):
-                caidos.add(i)
-                vivos = [j for j in range(n_nodos) if j not in caidos]
-                if not vivos:
-                    raise RuntimeError("Todos los nodos cayeron")
-                huerfanas = [r for r in pendientes[i] if r not in resultados]
-                for k, r in enumerate(huerfanas):          # reasignacion
-                    d = vivos[k % len(vivos)]
-                    colas[d].put(r)
-                    pendientes[d].add(r)
-                pendientes[i] = set()
-                msg = (f"t={time.perf_counter() - t0:.2f}s | nodo {i} CAIDO | "
-                       f"{len(huerfanas)} tareas reasignadas a nodos {vivos}")
-                eventos.append(msg)
-                if on_evento:
-                    on_evento(""+msg)
-    tiempo = time.perf_counter() - t0
+    try:
+        while len(resultados) < len(rutas):
+            if cancelar is not None and cancelar.is_set():
+                raise Cancelado()
+            try:
+                res = cola_res.get(timeout=0.2)
+                if res["archivo"] not in resultados:
+                    resultados[res["archivo"]] = res
+                    n = res["nodo"]
+                    hechas[n] += 1
+                    if on_nodo:
+                        on_nodo(n, hechas[n], asignadas[n], n in caidos)
+                pendientes[res["nodo"]].discard(res["archivo"])
+            except queue.Empty:
+                pass
 
-    for i in range(n_nodos):
-        if i not in caidos:
-            colas[i].put(None)
-    for p in procs:
-        p.join(timeout=5)
+            for i, p in enumerate(procs):
+                if i not in caidos and p.exitcode not in (None, 0):
+                    caidos.add(i)
+                    vivos = [j for j in range(n_nodos) if j not in caidos]
+                    if not vivos:
+                        raise RuntimeError("Todos los nodos cayeron")
+                    huerfanas = [r for r in pendientes[i] if r not in resultados]
+                    for k, r in enumerate(huerfanas):
+                        d = vivos[k % len(vivos)]
+                        colas[d].put(r)
+                        pendientes[d].add(r)
+                        asignadas[d] += 1
+                    pendientes[i] = set()
+                    asignadas[i] = hechas[i]
+                    msg = (f"t={time.perf_counter() - t0:.2f}s | nodo {i} CAIDO | "
+                           f"{len(huerfanas)} tareas reasignadas a nodos {vivos}")
+                    eventos.append(msg)
+                    if on_evento:
+                        on_evento("  " + msg)
+                    if on_nodo:
+                        on_nodo(i, hechas[i], asignadas[i], True)
+                        for d in vivos:
+                            on_nodo(d, hechas[d], asignadas[d], False)
+
+        tiempo = time.perf_counter() - t0
+        for i in range(n_nodos):
+            if i not in caidos:
+                colas[i].put(None)
+        for p in procs:
+            p.join(timeout=5)
+    finally:
+        for p in procs:
+            if p.is_alive():
+                p.terminate()
+                p.join(timeout=2)
     return list(resultados.values()), tiempo, eventos
 
 
@@ -164,35 +194,55 @@ def entorno(on_log=print):
 
 #____________________________________
 
+ESCENARIOS = [
+    ("Secuencial (1 equipo)", 1, False),
+    ("Distribuido 2 nodos", 2, False),
+    ("Distribuido 4 nodos", 4, False),
+    ("4 nodos con falla (nodo 3)", 4, True),
+]
+
+
 def ejecutar_escenarios(config, on_log=print, on_progreso=None, cancelar=None):
-    rutas = generar_archivos(config["archivos"], config["lineas"])
-    escenarios = [
-        ("Secuencial (1 equipo)", 1, {}),
-        ("Distribuido 2 nodos", 2, {}),
-        ("Distribuido 4 nodos", 4, {}),
-        ("4 nodos con falla (nodo 3)", 4,
-         {"nodo_falla": NODO_FALLA, "falla_tras": FALLA_TRAS}),
-    ]
-    total = len(escenarios) * config["rep"]
-    hechas = 0
+    emitir = on_progreso or (lambda ev: None)
+    emitir({"tipo": "generacion", "hechas": 0, "total": config["archivos"]})
+    rutas = generar_archivos(
+        config["archivos"], config["lineas"],
+        on_archivo=lambda h, t: emitir({"tipo": "generacion", "hechas": h, "total": t}),
+        cancelar=cancelar)
+
+    total = len(ESCENARIOS) * config["rep"]
+    terminadas = 0
     filas, corridas, t1, huella_ref = [], [], None, None
 
-    for nombre, nodos, extra in escenarios:
+    for idx, (nombre, nodos, con_falla) in enumerate(ESCENARIOS):
         on_log(f"== {nombre} ==")
+        extra = {}
+        if con_falla:   # el nodo 3 cae tras completar el 40 % de sus tareas
+            extra = {"nodo_falla": NODO_FALLA,
+                     "falla_tras": max(1, int(0.4 * len(rutas) / nodos))}
         tiempos, huellas = [], set()
+
         for rep in range(1, config["rep"] + 1):
+            emitir({"tipo": "corrida_inicio", "escenario": idx, "nombre": nombre,
+                    "nodos": nodos, "rep": rep, "total_rep": config["rep"]})
+
+            def on_nodo(i, h, t, caido, idx=idx):
+                emitir({"tipo": "nodo", "escenario": idx, "nodo": i,
+                        "hechas": h, "total": t, "caido": caido})
+
             if nodos == 1:
-                res, t = ejecutar_secuencial(rutas, cancelar)
+                res, t = ejecutar_secuencial(rutas, cancelar, on_nodo)
             else:
                 res, t, _ = ejecutar_distribuido(
-                    rutas, n_nodos=nodos, on_evento=on_log, cancelar=cancelar, **extra)
+                    rutas, n_nodos=nodos, on_evento=on_log,
+                    on_nodo=on_nodo, cancelar=cancelar, **extra)
+
             tiempos.append(t)
             huellas.add(huella(res))
             corridas.append([nombre, rep, round(t, 4)])
-            hechas += 1
+            terminadas += 1
             on_log(f"  corrida {rep}/{config['rep']}: {t:.2f} s")
-            if on_progreso:
-                on_progreso(hechas / total * 100)
+            emitir({"tipo": "global", "porcentaje": terminadas / total * 100})
 
         t_med = statistics.mean(tiempos)
         t_sd = statistics.stdev(tiempos) if len(tiempos) > 1 else 0.0
@@ -203,6 +253,8 @@ def ejecutar_escenarios(config, on_log=print, on_progreso=None, cancelar=None):
         filas.append([nombre, nodos, round(t_med, 4), round(t_sd, 4),
                       round(speedup, 4), round(speedup / nodos, 4),
                       len(rutas), next(iter(huellas)), "OK" if ok else "DIFERENTE"])
+        emitir({"tipo": "escenario_fin", "escenario": idx, "fila": filas[-1]})
+
     return filas, corridas
 
 #--------------------------------------------------
@@ -235,3 +287,42 @@ def crear_figura(filas):
 
     fig.tight_layout()
     return fig
+
+#----------------------------------------------
+
+def estimar_eta(archivos, lineas, rep, muestra=3):
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        rutas = []
+        t0 = time.perf_counter()
+        for i in range(muestra):
+            ruta = Path(tmp) / f"m{i}.txt"
+            rng = random.Random(SEMILLA + i)
+            ruta.write_text("\n".join(f"{rng.gauss(50, 15):.6f}" for _ in range(lineas)),
+                            encoding="ascii")
+            rutas.append(str(ruta))
+        t_gen = (time.perf_counter() - t0) / muestra
+        t0 = time.perf_counter()
+        for r in rutas:
+            procesar_archivo(r)
+        t_proc = (time.perf_counter() - t0) / muestra
+
+    directorio = Path(f"datos_{lineas}")
+    faltantes = sum(1 for i in range(archivos)
+                    if not (directorio / f"datos_{i:04d}.txt").exists())
+    nucleos = os.cpu_count() or 1
+    secuencial = archivos * t_proc
+
+    # (nodos, eficiencia típica, sobrecosto de arranque en s)
+    modelo = [(1, 1.00, 0.0), (2, 0.90, 0.6), (4, 0.83, 0.8), (4, 0.74, 1.3)]
+    por_escenario = [secuencial / (min(n, nucleos) * ef) + extra for n, ef, extra in modelo]
+    generacion = faltantes * t_gen
+
+    return {
+        "t_archivo_s": round(t_proc, 5),
+        "faltantes": faltantes,
+        "generacion_s": round(generacion, 1),
+        "por_escenario_s": [round(x, 1) for x in por_escenario],
+        "total_s": round(generacion + rep * sum(por_escenario), 1),
+        "disco_mb": round(archivos * lineas * 9 / 1e6),
+    }
