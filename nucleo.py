@@ -161,7 +161,7 @@ def entorno(on_log=print):
         on_log(f"Matplotlib: {matplotlib.__version__}")
     except ImportError:
         on_log("Matplotlib: no instalado")
-        
+
 #____________________________________
 
 def ejecutar_escenarios(config, on_log=print, on_progreso=None, cancelar=None):
@@ -204,3 +204,34 @@ def ejecutar_escenarios(config, on_log=print, on_progreso=None, cancelar=None):
                       round(speedup, 4), round(speedup / nodos, 4),
                       len(rutas), next(iter(huellas)), "OK" if ok else "DIFERENTE"])
     return filas, corridas
+
+#--------------------------------------------------
+
+def crear_figura(filas):
+    """Devuelve una Figure con tiempos y speedup. No guarda ni muestra nada."""
+    from matplotlib.figure import Figure
+
+    fig = Figure(figsize=(12, 4.5))
+    ax = fig.subplots(1, 2)
+
+    etiquetas = [f[0] for f in filas]
+    barras = ax[0].bar(etiquetas, [f[2] for f in filas],
+                       yerr=[f[3] for f in filas], capsize=4, color="#4a7ebb")
+    ax[0].bar_label(barras, fmt="%.1f s", padding=3)
+    ax[0].set_ylabel("Tiempo (s)")
+    ax[0].set_title(f"Tiempo de procesamiento ({filas[0][6]:,} archivos)".replace(",", "."))
+    ax[0].tick_params(axis="x", rotation=20)
+    for lbl in ax[0].get_xticklabels():
+        lbl.set_ha("right")
+
+    ps = [f[1] for f in filas[:3]]
+    ax[1].plot(ps, [f[4] for f in filas[:3]], "o-", label="Speedup medido")
+    ax[1].plot(ps, ps, "--", label="Ideal")
+    ax[1].set_xticks(ps)
+    ax[1].set_xlabel("Nodos")
+    ax[1].set_ylabel("Speedup")
+    ax[1].set_title("Aceleracion frente al ideal")
+    ax[1].legend()
+
+    fig.tight_layout()
+    return fig
