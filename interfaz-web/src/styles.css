@@ -87,3 +87,38 @@ button.ghost:hover{background:#E4ECF9}
 .files a{color:var(--blue);font-weight:600;min-width:210px}
 select{font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:6px}
 @media (max-width:640px){.calc{grid-template-columns:1fr}.hbar{grid-template-columns:96px 1fr 62px}nav.top b{display:none}}
+
+/* ---------- Simulación en vivo (Laboratorio.jsx) ---------- */
+.lab{display:grid;gap:18px}
+h3.mini.first{margin-top:0}
+.campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+label.fld{display:block;font-size:.88rem;color:var(--mute);margin-bottom:6px}
+.txt{width:100%;font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:8px;color:var(--navy);background:#fff}
+.txt:disabled{background:#EEF2F8}
+.txt[aria-invalid=true]{border-color:var(--red)}
+.eta{margin-top:16px;padding:12px 16px;background:#E4ECF9;border-radius:10px;font-size:.95rem;color:var(--navy)}
+.eta small{display:block;margin-top:2px;color:var(--ink);font-size:.85rem}
+.acciones{margin-top:16px}
+button:disabled{opacity:.45;cursor:not-allowed}
+.error{color:var(--red);font-size:.92rem;font-weight:600}
+.gbar{height:12px;background:#E6ECF5;border-radius:6px;overflow:hidden;margin-top:14px}
+.gbar div{height:100%;background:var(--blue);transition:width .3s}
+.meta{display:flex;justify-content:space-between;font-size:.88rem;color:var(--mute);margin-top:6px}
+.esc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:16px}
+.node.esc h3{display:block;margin:0}
+.node.active{border-color:var(--blue);box-shadow:0 0 0 3px #E4ECF9}
+.sub-esc{font-size:.85rem;color:var(--mute);margin:2px 0 10px}
+.nrow{display:grid;grid-template-columns:96px 1fr 76px;gap:10px;align-items:center;margin:6px 0;font-size:.86rem}
+.nrow .fill{transition:width .15s}
+.nrow .cnt{margin:0;text-align:right;color:var(--mute)}
+.nrow.down{color:var(--red);font-weight:600}
+.nrow.down .fill{background:var(--red)}
+.reg{margin-top:18px}
+.reg summary{cursor:pointer;color:var(--blue);font-weight:600}
+.logbox{margin:10px 0 0;max-height:220px;overflow:auto;background:var(--navy);color:#D5E1F5;font:12px/1.5 Consolas,monospace;padding:12px;border-radius:8px;white-space:pre-wrap}
+.gimg{display:block;max-width:100%;margin:18px 0 0;border:1px solid var(--line);border-radius:10px}
+td.okc{color:#1E7A43;font-weight:600}td.malc{color:var(--red);font-weight:600}
+.aviso{margin:0 0 14px;padding:10px 14px;background:#FDF1E3;border-left:4px solid var(--orange);border-radius:6px;color:var(--ink)}
+.aviso code{background:#fff;padding:1px 6px;border-radius:4px}
+@media (max-width:760px){.esc-grid{grid-template-columns:1fr}}
+@media (max-width:640px){.nrow{grid-template-columns:80px 1fr 64px}}

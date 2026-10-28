@@ -3,12 +3,17 @@ import json
 import multiprocessing as mp
 import queue
 import threading
+from pathlib import Path
 
 from flask import Flask, Response, abort, jsonify, request, send_file, send_from_directory
 
 import nucleo
 
-app = Flask(__name__)
+BASE = Path(__file__).resolve().parent
+DIST = BASE / "interfaz-web" / "dist"          # resultado de: cd interfaz-web && npm run build
+CARPETA = DIST if (DIST / "index.html").exists() else BASE / "static"   # si no hay build, se usa static/index.html
+
+app = Flask(__name__, static_folder=str(CARPETA), static_url_path="")
 cola_eventos = queue.Queue()
 estado = {"corriendo": False, "cancelar": threading.Event(), "filas": None, "corridas": None}
 
@@ -47,9 +52,9 @@ def trabajo(config):
 @app.get("/")
 def inicio():
     try:
-        return send_from_directory("static", "index.html")
+        return send_from_directory(CARPETA, "index.html")
     except Exception:
-        return "Servidor activo. Falta static/index.html (paso C)."
+        return "Servidor activo. Falta la interfaz: ejecuta 'npm run build' en interfaz-web."
 
 
 @app.get("/api/eta")

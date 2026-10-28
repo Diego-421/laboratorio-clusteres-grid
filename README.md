@@ -15,6 +15,30 @@ python laboratorio_distribuido.py
 El script genera los 1.000 archivos de datos la primera vez (unos 270 MB, que no se
 suben al repositorio) y crea los archivos de resultados.
 
+## Interfaz web (simulación en vivo + resultados)
+
+La interfaz está hecha en React (`interfaz-web/`) y se comunica con el servidor Flask (`app.py`),
+que ejecuta la simulación real de `nucleo.py` y envía el progreso en vivo.
+
+**Uso normal** (un solo servidor, http://127.0.0.1:5000):
+
+```
+pip install flask matplotlib
+cd interfaz-web && npm install && npm run build && cd ..
+python app.py
+```
+
+**Desarrollo** (recarga automática; el proxy de Vite reenvía `/api` a Flask):
+
+```
+python app.py            # terminal 1
+cd interfaz-web
+npm run dev              # terminal 2 -> http://localhost:5173
+```
+
+Si se publica solo el frontend (GitHub Pages, etc.) no hay servidor Flask: la interfaz lo detecta
+y muestra la animación ilustrativa en lugar de la simulación real.
+
 ## Resultados (Windows 11, 12 núcleos lógicos)
 
 | Escenario | Nodos | Tiempo (s) | Speedup | Eficiencia |

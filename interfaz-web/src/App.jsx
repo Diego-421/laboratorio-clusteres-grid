@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ESC, HUELLA, REPO, f } from './datos.js'
 import { Barras, Lineas, Eficiencia } from './Graficas.jsx'
-import Simulacion from './Simulacion.jsx'
+import Laboratorio from './Laboratorio.jsx'
 import Detalle from './Detalle.jsx'
 import Calculadora from './Calculadora.jsx'
 import Comparacion from './Comparacion.jsx'
@@ -30,7 +30,7 @@ export default function App() {
         <div className="wrap">
           <b>Clústeres y Grid · Grupo 7</b>
           <div className="links">
-            <a href="#simulacion">Simulación</a><a href="#resultados">Resultados</a><a href="#escenario">Escenarios</a>
+            <a href="#simulacion">Simulación</a><a href="#resultados">Referencia</a><a href="#escenario">Escenarios</a>
             <a href="#amdahl">Amdahl</a><a href="#comparacion">Comparación</a><a href="#evidencias">Evidencias</a>
           </div>
         </div>
@@ -51,13 +51,13 @@ export default function App() {
       </header>
       <main className="wrap">
         <section id="simulacion">
-          <h2>Mira cómo se reparte el trabajo</h2>
-          <p className="sub">Inicia la animación, cambia la velocidad y activa la caída del nodo 3 para ver cómo el coordinador reasigna sus tareas.</p>
-          <Simulacion />
+          <h2>Ejecuta la simulación</h2>
+          <p className="sub">Elige los parámetros, mira en vivo cómo el coordinador reparte el trabajo entre los nodos (incluida la caída del nodo 3) y revisa los resultados de tu ejecución.</p>
+          <Laboratorio />
         </section>
         <section id="resultados">
-          <h2>Resultados medidos</h2>
-          <p className="sub">Promedio de tres corridas por escenario. Pasa el cursor sobre una barra para ver sus corridas.</p>
+          <h2>Resultados de referencia</h2>
+          <p className="sub">Promedio de tres corridas por escenario en la ejecución oficial del laboratorio (1.000 archivos). Pasa el cursor sobre una barra para ver sus corridas.</p>
           <div className="charts">
             <div className="panel"><Barras /></div>
             <div className="panel"><Lineas /></div>
