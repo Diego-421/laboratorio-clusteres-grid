@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio Grupo 7 · Procesamiento distribuido</title>
+<style>
+:root{--azul:#1f4e8c;--azul-claro:#e8f0fa;--borde:#d5dde8;--texto:#1c2733;--gris:#667587;--ok:#2e8b57;--rojo:#c0392b;--fondo:#f6f8fb}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",system-ui,sans-serif;background:var(--fondo);color:var(--texto)}
+header{background:var(--azul);color:#fff;padding:18px 24px}
+header h1{margin:0;font-size:1.35rem}
+header p{margin:4px 0 0;opacity:.85;font-size:.9rem}
+main{max-width:1100px;margin:0 auto;padding:20px;display:grid;gap:18px}
+.card{background:#fff;border:1px solid var(--borde);border-radius:10px;padding:18px}
+.card h2{margin:0 0 12px;font-size:1.05rem;color:var(--azul)}
+.campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+label{display:block;font-size:.85rem;color:var(--gris);margin-bottom:4px}
+input{width:100%;padding:9px 10px;border:1px solid var(--borde);border-radius:6px;font-size:1rem}
+input:disabled{background:#eef1f5}
+.eta{margin-top:14px;padding:12px 14px;background:var(--azul-claro);border-radius:8px;font-size:.95rem}
+.eta small{display:block;color:var(--gris);margin-top:2px}
+.acciones{margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+button{padding:10px 20px;border:0;border-radius:6px;font-size:.95rem;cursor:pointer;background:var(--azul);color:#fff}
+button.sec{background:#fff;color:var(--azul);border:1px solid var(--azul)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.error{color:var(--rojo);font-size:.9rem}
+.estado{font-size:.95rem;margin-bottom:8px}
+.global{height:12px;background:#e3e8ef;border-radius:6px;overflow:hidden}
+.global div{height:100%;width:0;background:var(--azul);transition:width .3s}
+.meta{display:flex;justify-content:space-between;font-size:.85rem;color:var(--gris);margin-top:6px}
+.escenarios{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;margin-top:16px}
+.esc{border:1px solid var(--borde);border-radius:8px;padding:12px;background:#fff}
+.esc.activo{border-color:var(--azul);box-shadow:0 0 0 2px var(--azul-claro)}
+.esc.hecho{border-color:var(--ok)}
+.esc h3{margin:0;font-size:.95rem}
+.sub{font-size:.8rem;color:var(--gris);margin:2px 0 8px}
+.nodo{display:grid;grid-template-columns:90px 1fr 80px;gap:8px;align-items:center;margin:5px 0;font-size:.82rem}
+.barra{height:14px;background:#e3e8ef;border-radius:7px;overflow:hidden}
+.barra div{height:100%;width:0;background:var(--azul);transition:width .15s}
+.barra div.caido{background:var(--rojo)}
+.esc.hecho .barra div:not(.caido){background:var(--ok)}
+.cnt{text-align:right;color:var(--gris)}
+.lbl.caido{color:var(--rojo);font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--borde);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{background:var(--azul-claro);color:var(--azul);font-weight:600}
+td.ok{color:var(--ok);font-weight:600}td.mal{color:var(--rojo);font-weight:600}
+.grafica img{max-width:100%;border:1px solid var(--borde);border-radius:8px}
+details summary{cursor:pointer;color:var(--azul);font-size:.9rem}
+#log{margin-top:8px;max-height:220px;overflow:auto;background:#101820;color:#cfe3f5;font:12px/1.5 Consolas,monospace;padding:10px;border-radius:6px;white-space:pre-wrap}
+footer{max-width:1100px;margin:0 auto;padding:0 20px 24px;font-size:.8rem;color:var(--gris)}
+.oculto{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Laboratorio Grupo 7: procesamiento distribuido de archivos</h1>
+  <p>Sistemas Distribuidos · Universidad Tecnológica de Pereira</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>1. Parámetros</h2>
+    <div class="campos">
+      <div><label for="archivos">Cantidad de archivos (8 – 2000)</label><input id="archivos" type="number" value="1000" min="8" max="2000"></div>
+      <div><label for="lineas">Valores por archivo (1000 – 100000)</label><input id="lineas" type="number" value="30000" min="1000" max="100000" step="1000"></div>
+      <div><label for="rep">Repeticiones por escenario (1 – 5)</label><input id="rep" type="number" value="3" min="1" max="5"></div>
+    </div>
+    <div class="eta" id="eta">Calculando estimación…</div>
+    <div class="acciones">
+      <button id="btnRun">Ejecutar simulación</button>
+      <button id="btnCancel" class="sec" disabled>Cancelar</button>
+      <span class="error" id="error"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2. Ejecución en vivo</h2>
+    <div class="estado" id="estado">En espera.</div>
+    <div class="global"><div id="globalBar"></div></div>
+    <div class="meta"><span id="globalTxt">0 %</span><span id="transcurrido">Transcurrido: 0 s</span></div>
+    <div class="escenarios" id="escenarios"></div>
+  </section>
+
+  <section class="card oculto" id="resultados">
+    <h2>3. Resultados</h2>
+    <table>
+      <thead><tr><th>Escenario</th><th>Nodos</th><th>Tiempo (s)</th><th>± Desv. (s)</th><th>Speedup</th><th>Eficiencia</th><th>Verificación</th></tr></thead>
+      <tbody id="tbodyRes"></tbody>
+    </table>
+    <div class="grafica oculto" id="grafica" style="margin-top:16px"><img id="img" alt="Gráfica de tiempos y speedup"></div>
+    <h2 style="margin-top:20px" id="tituloRepeticion">Tiempo de cada corrida</h2>
+    <table>
+      <thead><tr><th>Escenario</th><th>Corrida</th><th>Tiempo (s)</th></tr></thead>
+      <tbody id="tbodyCor"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <details><summary>Registro de la ejecución</summary><div id="log"></div></details>
+  </section>
+</main>
+
+<footer>Simulación en un único computador: un coordinador y varios nodos (procesos de Python). No es una Grid ni un clúster real.</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const ESC = [
+  {nombre: "Secuencial (1 equipo)", nodos: 1},
+  {nombre: "Distribuido 2 nodos", nodos: 2},
+  {nombre: "Distribuido 4 nodos", nodos: 4},
+  {nombre: "4 nodos con falla (nodo 3)", nodos: 4}
+];
+let fuente = null, reloj = null, inicio = 0, tEta = null, versionEta = 0;
+
+const fmt = s => { s = Math.round(s); return s < 60 ? s + " s" : Math.floor(s / 60) + " min " + (s % 60) + " s"; };
+const num = (x, d = 2) => Number(x).toLocaleString("es-CO", {minimumFractionDigits: d, maximumFractionDigits: d});
+
+function construirTarjetas() {
+  const cont = $("escenarios"); cont.innerHTML = "";
+  ESC.forEach((e, idx) => {
+    const div = document.createElement("div"); div.className = "esc"; div.id = "esc-" + idx;
+    const h = document.createElement("h3"); h.textContent = e.nombre;
+    const sub = document.createElement("div"); sub.className = "sub"; sub.id = "sub-" + idx; sub.textContent = "En espera";
+    div.append(h, sub);
+    for (let i = 0; i < e.nodos; i++) {
+      const fila = document.createElement("div"); fila.className = "nodo";
+      const lbl = document.createElement("span"); lbl.id = `lbl-${idx}-${i}`;
+      lbl.textContent = e.nodos === 1 ? "Equipo único" : "Nodo " + i;
+      const barra = document.createElement("div"); barra.className = "barra";
+      const rel = document.createElement("div"); rel.id = `bar-${idx}-${i}`; barra.appendChild(rel);
+      const cnt = document.createElement("span"); cnt.className = "cnt"; cnt.id = `cnt-${idx}-${i}`; cnt.textContent = "0 / 0";
+      fila.append(lbl, barra, cnt); div.appendChild(fila);
+    }
+    cont.appendChild(div);
+  });
+}
+
+function reiniciarTarjeta(idx) {
+  const e = ESC[idx];
+  for (let i = 0; i < e.nodos; i++) {
+    $(`bar-${idx}-${i}`).style.width = "0%";
+    $(`bar-${idx}-${i}`).classList.remove("caido");
+    $(`lbl-${idx}-${i}`).classList.remove("caido");
+    $(`lbl-${idx}-${i}`).textContent = e.nodos === 1 ? "Equipo único" : "Nodo " + i;
+    $(`cnt-${idx}-${i}`).textContent = "0 / 0";
+  }
+}
+
+function leerConfig() {
+  const c = {archivos: +$("archivos").value, lineas: +$("lineas").value, rep: +$("rep").value};
+  const ok = Number.isInteger(c.archivos) && c.archivos >= 8 && c.archivos <= 2000 &&
+             Number.isInteger(c.lineas) && c.lineas >= 1000 && c.lineas <= 100000 &&
+             Number.isInteger(c.rep) && c.rep >= 1 && c.rep <= 5;
+  return ok ? c : null;
+}
+
+// ---------- ETA
+function pedirEta() {
+  clearTimeout(tEta);
+  const c = leerConfig();
+  if (!c) { $("eta").textContent = "Revisa los valores: archivos 8–2000, valores 1000–100000, repeticiones 1–5."; return; }
+  $("eta").textContent = "Calculando estimación…";
+  tEta = setTimeout(async () => {
+    const v = ++versionEta;
+    try {
+      const r = await fetch(`/api/eta?archivos=${c.archivos}&lineas=${c.lineas}&rep=${c.rep}`);
+      const d = await r.json();
+      if (v !== versionEta) return;
+      if (!r.ok) { $("eta").textContent = d.error || "No se pudo estimar."; return; }
+      let extra = `Datos en disco: ≈ ${d.disco_mb} MB.`;
+      if (d.faltantes > 0) extra += ` Se generarán ${d.faltantes} archivos nuevos (≈ ${fmt(d.generacion_s)}).`;
+      $("eta").innerHTML = `Tiempo estimado: <b>entre ${fmt(d.total_s * 0.8)} y ${fmt(d.total_s * 1.4)}</b><small>${extra} Es una aproximación basada en una medición rápida de tu equipo.</small>`;
+    } catch (e) { $("eta").textContent = "No se pudo conectar con el servidor."; }
+  }, 400);
+}
+
+// ---------- ejecución
+function enCurso(si) {
+  ["archivos", "lineas", "rep"].forEach(id => $(id).disabled = si);
+  $("btnRun").disabled = si; $("btnCancel").disabled = !si;
+}
+
+function limpiar() {
+  $("error").textContent = ""; $("log").textContent = "";
+  $("globalBar").style.width = "0%"; $("globalTxt").textContent = "0 %";
+  $("resultados").classList.add("oculto"); $("grafica").classList.add("oculto");
+  $("tbodyRes").innerHTML = ""; $("tbodyCor").innerHTML = "";
+  construirTarjetas();
+}
+
+async function ejecutar() {
+  const c = leerConfig();
+  if (!c) { $("error").textContent = "Revisa los valores antes de ejecutar."; return; }
+  limpiar();
+  const r = await fetch("/api/iniciar", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(c)});
+  const d = await r.json();
+  if (!r.ok) { $("error").textContent = d.error || "No se pudo iniciar."; return; }
+  enCurso(true);
+  $("estado").textContent = "Iniciando…";
+  inicio = Date.now();
+  reloj = setInterval(() => $("transcurrido").textContent = "Transcurrido: " + fmt((Date.now() - inicio) / 1000), 500);
+  fuente = new EventSource("/api/eventos");
+  fuente.onmessage = e => manejar(JSON.parse(e.data));
+}
+
+function terminar(msg) {
+  if (fuente) { fuente.close(); fuente = null; }
+  clearInterval(reloj);
+  enCurso(false);
+  $("estado").textContent = msg;
+}
+
+function agregarFila(f) {
+  const tr = document.createElement("tr");
+  const vals = [f[0], f[1], num(f[2]), num(f[3]), num(f[4]), num(f[5] * 100, 1) + " %", f[8]];
+  vals.forEach((v, i) => {
+    const td = document.createElement("td"); td.textContent = v;
+    if (i === 6) td.className = v === "OK" ? "ok" : "mal";
+    tr.appendChild(td);
+  });
+  $("tbodyRes").appendChild(tr);
+}
+
+function manejar(ev) {
+  switch (ev.tipo) {
+    case "generacion":
+      $("estado").textContent = `Generando archivos de datos: ${ev.hechas} / ${ev.total}`; break;
+    case "log":
+      $("log").textContent += ev.mensaje + "\n"; $("log").scrollTop = $("log").scrollHeight; break;
+    case "corrida_inicio":
+      document.querySelectorAll(".esc").forEach(d => d.classList.remove("activo"));
+      $("esc-" + ev.escenario).classList.add("activo");
+      reiniciarTarjeta(ev.escenario);
+      $("sub-" + ev.escenario).textContent = `Repeticion ${ev.rep} de ${ev.total_rep}`;
+      $("estado").textContent = `Escenario ${ev.escenario + 1} de 4 · ${ev.nombre} · repeticion ${ev.rep} de ${ev.total_rep}`;
+      break;
+    case "nodo": {
+      const k = `${ev.escenario}-${ev.nodo}`;
+      const pct = ev.total > 0 ? Math.min(100, ev.hechas / ev.total * 100) : 100;
+      $("bar-" + k).style.width = pct + "%";
+      $("cnt-" + k).textContent = `${ev.hechas} / ${ev.total}`;
+      $("bar-" + k).classList.toggle("caido", ev.caido);
+      $("lbl-" + k).classList.toggle("caido", ev.caido);
+      if (ev.caido) $("lbl-" + k).textContent = `Nodo ${ev.nodo} ✕ caído`;
+      break;
+    }
+    case "global":
+      $("globalBar").style.width = ev.porcentaje + "%";
+      $("globalTxt").textContent = Math.round(ev.porcentaje) + " %"; break;
+    case "escenario_fin":
+      $("esc-" + ev.escenario).classList.remove("activo");
+      $("esc-" + ev.escenario).classList.add("hecho");
+      $("sub-" + ev.escenario).textContent = `Completado · ${num(ev.fila[2])} s (promedio)`;
+      $("resultados").classList.remove("oculto");
+      agregarFila(ev.fila); break;
+    case "fin":
+      $("tbodyRes").innerHTML = ""; ev.filas.forEach(agregarFila);
+      $("tbodyCor").innerHTML = "";
+      ev.corridas.forEach(c => {
+        const tr = document.createElement("tr");
+        [c[0], c[1], num(c[2])].forEach(v => { const td = document.createElement("td"); td.textContent = v; tr.appendChild(td); });
+        $("tbodyCor").appendChild(tr);
+      });
+      $("img").src = "/api/grafica.png?t=" + Date.now();
+      $("grafica").classList.remove("oculto");
+      $("globalBar").style.width = "100%"; $("globalTxt").textContent = "100 %";
+      terminar("Simulación completada en " + fmt((Date.now() - inicio) / 1000) + ".");
+      break;
+    case "cancelado": terminar("Simulación cancelada."); break;
+    case "error": $("error").textContent = ev.mensaje; terminar("La simulación terminó con un error."); break;
+  }
+}
+
+$("btnRun").addEventListener("click", ejecutar);
+$("btnCancel").addEventListener("click", () => { $("estado").textContent = "Cancelando…"; fetch("/api/cancelar", {method: "POST"}); });
+["archivos", "lineas", "rep"].forEach(id => $(id).addEventListener("input", pedirEta));
+construirTarjetas();
+pedirEta();
+</script>
+</body>
+</html>
