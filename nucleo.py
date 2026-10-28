@@ -290,26 +290,39 @@ def crear_figura(filas):
 
 #----------------------------------------------
 
-def estimar_eta(archivos, lineas, rep, muestra=3):
+def estimar_eta(archivos, lineas, rep, muestra=5):
     import tempfile
-    with tempfile.TemporaryDirectory() as tmp:
-        rutas = []
-        t0 = time.perf_counter()
-        for i in range(muestra):
-            ruta = Path(tmp) / f"m{i}.txt"
-            rng = random.Random(SEMILLA + i)
-            ruta.write_text("\n".join(f"{rng.gauss(50, 15):.6f}" for _ in range(lineas)),
-                            encoding="ascii")
-            rutas.append(str(ruta))
-        t_gen = (time.perf_counter() - t0) / muestra
+
+    def medir(rutas):
+        for r in rutas:                      # calentamiento
+            procesar_archivo(r)
         t0 = time.perf_counter()
         for r in rutas:
             procesar_archivo(r)
-        t_proc = (time.perf_counter() - t0) / muestra
+        return (time.perf_counter() - t0) / len(rutas)
 
     directorio = Path(f"datos_{lineas}")
-    faltantes = sum(1 for i in range(archivos)
-                    if not (directorio / f"datos_{i:04d}.txt").exists())
+    existentes = [str(directorio / f"datos_{i:04d}.txt") for i in range(archivos)
+                  if (directorio / f"datos_{i:04d}.txt").exists()]
+    faltantes = archivos - len(existentes)
+    reales = existentes[:muestra]
+
+    t_gen = 0.0
+    if faltantes > 0 or len(reales) < muestra:
+        with tempfile.TemporaryDirectory() as tmp:
+            rutas = []
+            t0 = time.perf_counter()
+            for i in range(muestra):
+                ruta = Path(tmp) / f"m{i}.txt"
+                rng = random.Random(SEMILLA + i)
+                ruta.write_text("\n".join(f"{rng.gauss(50, 15):.6f}" for _ in range(lineas)),
+                                encoding="ascii")
+                rutas.append(str(ruta))
+            t_gen = (time.perf_counter() - t0) / muestra
+            t_proc = medir(reales if len(reales) >= muestra else rutas)
+    else:
+        t_proc = medir(reales)
+
     nucleos = os.cpu_count() or 1
     secuencial = archivos * t_proc
 
