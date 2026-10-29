@@ -1,2 +1,6 @@
 datos_*/
 __pycache__/
+resultados.csv
+corridas.csv
+registro.txt
+grafica_tiempos.png
