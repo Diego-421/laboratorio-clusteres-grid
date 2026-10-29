@@ -52,6 +52,31 @@ details summary{cursor:pointer;color:var(--azul);font-size:.9rem}
 #log{margin-top:8px;max-height:220px;overflow:auto;background:#101820;color:#cfe3f5;font:12px/1.5 Consolas,monospace;padding:10px;border-radius:6px;white-space:pre-wrap}
 footer{max-width:1100px;margin:0 auto;padding:0 20px 24px;font-size:.8rem;color:var(--gris)}
 .oculto{display:none}
+.nota{color:var(--gris);font-size:.85rem;margin:6px 0 12px}
+.card h3{margin:0 0 8px;font-size:.95rem}
+.ref-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:20px}
+.sub-card{border:1px solid var(--borde);border-radius:8px;padding:12px}
+.grafsvg svg{width:100%;height:auto;display:block}
+.svg-tit{font:600 12px "Segoe UI",sans-serif;fill:#1c2733}
+.svg-grid{stroke:#e3e8ef;stroke-width:1}
+.svg-eje{font:11px "Segoe UI",sans-serif;fill:#667587}
+.svg-val{font:600 11px "Segoe UI",sans-serif;fill:#1c2733}
+.svg-blanco{font:700 11px "Segoe UI",sans-serif;fill:#fff}
+.svg-ideal{stroke:#8a96a6;stroke-width:1.5;stroke-dasharray:5 4}
+.efic-fila{display:grid;grid-template-columns:120px 1fr 54px;gap:8px;align-items:center;margin:12px 0;font-size:.85rem}
+.efic-barra{height:12px;background:#e3e8ef;border-radius:6px;overflow:hidden}
+.efic-barra div{height:100%;border-radius:6px}
+.efic-fila b{text-align:right}
+.tabla-wrap{overflow-x:auto}
+th.grupo{text-align:center;border-left:1px solid var(--borde)}
+.tabla-ref td.prop{background:#f3faf6}
+.am-grid{display:grid;grid-template-columns:minmax(260px,1fr) 1.5fr;gap:20px;align-items:start}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.stat{background:var(--fondo);border-radius:8px;padding:12px}
+.stat b{display:block;font-size:1.5rem;color:var(--azul)}
+.stat span{font-size:.8rem;color:var(--gris)}
+input[type=range]{padding:0;border:0;accent-color:var(--azul);margin:4px 0 14px}
+@media(max-width:760px){.am-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -91,13 +116,56 @@ footer{max-width:1100px;margin:0 auto;padding:0 20px 24px;font-size:.8rem;color:
       <tbody id="tbodyRes"></tbody>
     </table>
     <div class="grafica oculto" id="grafica" style="margin-top:16px"><img id="img" alt="Gráfica de tiempos y speedup"></div>
-    <h2 style="margin-top:20px" id="tituloRepeticion">Tiempo de cada corrida</h2>
+    <h2 style="margin-top:20px" id="tituloRepeticion">Tiempo de cada repetición</h2>
     <table>
-      <thead><tr><th>Escenario</th><th>Corrida</th><th>Tiempo (s)</th></tr></thead>
+      <thead><tr><th>Escenario</th><th>Repetición</th><th>Tiempo (s)</th></tr></thead>
       <tbody id="tbodyCor"></tbody>
     </table>
   </section>
+  <section class="card" id="referencia">
+    <h2>Resultados de referencia</h2>
+    <p class="nota">Promedio de tres corridas por escenario con 1.000 archivos, medido en Windows 11 con 12 núcleos lógicos. Es un punto de comparación: tu equipo dará tiempos distintos.</p>
+    <div class="ref-grid">
+      <div class="sub-card grafsvg" id="gTiempos"></div>
+      <div class="sub-card grafsvg" id="gSpeedup"></div>
+      <div class="sub-card">
+        <h3>Eficiencia por escenario</h3>
+        <div id="efic"></div>
+        <p class="nota">Eficiencia = speedup / número de nodos. Cae al sumar nodos porque comparten un mismo computador.</p>
+      </div>
+    </div>
+    <h3>Resumen en tabla</h3>
+    <div class="tabla-wrap">
+      <table class="tabla-ref">
+        <thead>
+          <tr><th></th><th class="grupo" colspan="3">Referencia</th><th class="grupo" colspan="3">Tu simulación</th></tr>
+          <tr><th>Escenario</th><th>Tiempo</th><th>Speedup</th><th>Eficiencia</th><th>Tiempo</th><th>Speedup</th><th>Eficiencia</th></tr>
+        </thead>
+        <tbody id="tbodyRef"></tbody>
+      </table>
+    </div>
+    <p class="nota" id="notaTabla"></p>
+  </section>
 
+  <section class="card" id="amdahl">
+    <h2>¿Por qué no llega a 4×?</h2>
+    <p class="nota">Mueve los controles para ver cómo la parte que no se puede paralelizar limita la aceleración.</p>
+    <div class="am-grid">
+      <div>
+        <label for="sP">Parte del trabajo que se puede paralelizar: <b id="vP"></b></label>
+        <input id="sP" type="range" min="10" max="99" step="1" value="93">
+        <label for="sN">Número de nodos: <b id="vN"></b></label>
+        <input id="sN" type="range" min="1" max="12" step="1" value="4">
+        <div class="stats">
+          <div class="stat"><b id="stTeorico"></b><span>Speedup teórico con <span id="lblN"></span> nodos</span></div>
+          <div class="stat"><b id="stLimite"></b><span>Límite con infinitos nodos</span></div>
+        </div>
+        <button class="sec" id="btnAjuste" type="button">Ajustar a lo medido</button>
+        <p class="nota" id="notaAmdahl"></p>
+      </div>
+      <div class="grafsvg" id="gAmdahl"></div>
+    </div>
+  </section>
   <section class="card">
     <details><summary>Registro de la ejecución</summary><div id="log"></div></details>
   </section>
@@ -172,7 +240,7 @@ function pedirEta() {
       if (!r.ok) { $("eta").textContent = d.error || "No se pudo estimar."; return; }
       let extra = `Datos en disco: ≈ ${d.disco_mb} MB.`;
       if (d.faltantes > 0) extra += ` Se generarán ${d.faltantes} archivos nuevos (≈ ${fmt(d.generacion_s)}).`;
-      $("eta").innerHTML = `Tiempo estimado: <b>entre ${fmt(d.total_s * 0.8)} y ${fmt(d.total_s * 1.4)}</b><small>${extra} Es una aproximación basada en una medición rápida de tu equipo.</small>`;
+      $("eta").innerHTML = `Tiempo estimado: <b>entre ${fmt(d.total_s * 0.8)} y ${fmt(d.total_s * 1.4)}</b><small>${extra} Es una aproximación basada en una medición rápida del equipo de ejecución.</small>`;
     } catch (e) { $("eta").textContent = "No se pudo conectar con el servidor."; }
   }, 400);
 }
@@ -267,6 +335,7 @@ function manejar(ev) {
       $("img").src = "/api/grafica.png?t=" + Date.now();
       $("grafica").classList.remove("oculto");
       $("globalBar").style.width = "100%"; $("globalTxt").textContent = "100 %";
+            propias = ev.filas; dibujarTabla(); dibujarAmdahl();
       terminar("Simulación completada en " + fmt((Date.now() - inicio) / 1000) + ".");
       break;
     case "cancelado": terminar("Simulación cancelada."); break;
@@ -279,6 +348,166 @@ $("btnCancel").addEventListener("click", () => { $("estado").textContent = "Canc
 ["archivos", "lineas", "rep"].forEach(id => $(id).addEventListener("input", pedirEta));
 construirTarjetas();
 pedirEta();
+// ---------- Referencia y Amdahl
+const REF = [
+  {nombre: "Secuencial (1 equipo)", et: "Secuencial (1 equipo)", l1: "Secuencial", l2: "1 equipo", nodos: 1, t: 7.40, s: 1.00, e: 1.000},
+  {nombre: "Distribuido, 2 nodos", et: "2 nodos distribuido", l1: "2 nodos", l2: "distribuido", nodos: 2, t: 4.13, s: 1.79, e: 0.896},
+  {nombre: "Distribuido, 4 nodos", et: "4 nodos distribuido", l1: "4 nodos", l2: "distribuido", nodos: 4, t: 2.24, s: 3.31, e: 0.827},
+  {nombre: "4 nodos con falla", et: "4 nodos con falla", l1: "4 nodos", l2: "con falla", nodos: 4, t: 2.51, s: 2.95, e: 0.736}
+];
+const COLORES = ["#0f2a4a", "#1f4e8c", "#2f7be0", "#d9822b"];
+let propias = null;                       // filas de la última simulación terminada
+const SVGNS = "http://www.w3.org/2000/svg";
+
+function nuevoSvg(w, h) {
+  const s = document.createElementNS(SVGNS, "svg");
+  s.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  s.setAttribute("role", "img");
+  return s;
+}
+function sv(padre, tag, attrs = {}, texto) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (texto !== undefined) e.textContent = texto;
+  padre.appendChild(e);
+  return e;
+}
+
+function graficaTiempos() {
+  const W = 380, H = 270, L = 42, R = 10, T = 28, B = 54, max = 8, alto = H - T - B;
+  const s = nuevoSvg(W, H);
+  sv(s, "text", {x: 4, y: 16, class: "svg-tit"}, "Tiempo de procesamiento (s)");
+  for (let v = 0; v <= max; v += 2) {
+    const y = T + alto * (1 - v / max);
+    sv(s, "line", {x1: L, x2: W - R, y1: y, y2: y, class: "svg-grid"});
+    sv(s, "text", {x: L - 6, y: y + 4, "text-anchor": "end", class: "svg-eje"}, v);
+  }
+  const bw = (W - L - R) / REF.length;
+  REF.forEach((r, i) => {
+    const h = alto * r.t / max, w = bw * 0.68, x = L + i * bw + bw * 0.16, y = T + alto - h, cx = x + w / 2;
+    sv(s, "rect", {x, y, width: w, height: h, rx: 4, fill: COLORES[i]});
+    sv(s, "text", {x: cx, y: y - 6, "text-anchor": "middle", class: "svg-val"}, num(r.t) + " s");
+    sv(s, "text", {x: cx, y: y + 18, "text-anchor": "middle", class: "svg-blanco"}, num(r.s) + "×");
+    sv(s, "text", {x: cx, y: H - B + 18, "text-anchor": "middle", class: "svg-eje"}, r.l1);
+    sv(s, "text", {x: cx, y: H - B + 31, "text-anchor": "middle", class: "svg-eje"}, r.l2);
+  });
+  $("gTiempos").replaceChildren(s);
+}
+
+function graficaSpeedup() {
+  const W = 380, H = 270, L = 38, R = 16, T = 28, B = 46;
+  const X = n => L + (W - L - R) * (n - 1) / 3;
+  const Y = v => T + (H - T - B) * (1 - v / 4);
+  const s = nuevoSvg(W, H);
+  sv(s, "text", {x: 4, y: 16, class: "svg-tit"}, "Aceleración (speedup) frente al ideal");
+  for (let v = 0; v <= 4; v++) {
+    sv(s, "line", {x1: L, x2: W - R, y1: Y(v), y2: Y(v), class: "svg-grid"});
+    sv(s, "text", {x: L - 6, y: Y(v) + 4, "text-anchor": "end", class: "svg-eje"}, v);
+  }
+  for (let n = 1; n <= 4; n++) sv(s, "text", {x: X(n), y: H - B + 16, "text-anchor": "middle", class: "svg-eje"}, n);
+  sv(s, "text", {x: (L + W - R) / 2, y: H - 8, "text-anchor": "middle", class: "svg-eje"}, "Número de nodos");
+  sv(s, "line", {x1: X(1), y1: Y(1), x2: X(4), y2: Y(4), class: "svg-ideal"});
+  sv(s, "text", {x: X(4), y: Y(4) - 8, "text-anchor": "end", class: "svg-eje"}, "Ideal (4×)");
+  const pts = REF.slice(0, 3);
+  sv(s, "polyline", {points: pts.map(r => X(r.nodos) + "," + Y(r.s)).join(" "), fill: "none", stroke: "#1f4e8c", "stroke-width": 2.5});
+  pts.forEach((r, i) => {
+    sv(s, "circle", {cx: X(r.nodos), cy: Y(r.s), r: 5, fill: "#1f4e8c"});
+    sv(s, "text", {x: X(r.nodos) + (i === 2 ? -8 : 0), y: Y(r.s) + (i === 0 ? 20 : -10),
+                   "text-anchor": i === 2 ? "end" : "middle", class: "svg-val"}, num(r.s) + "×");
+  });
+  const f = REF[3];
+  sv(s, "circle", {cx: X(4), cy: Y(f.s), r: 5, fill: "#d9822b"});
+  sv(s, "text", {x: X(4) - 8, y: Y(f.s) + 16, "text-anchor": "end", class: "svg-val"}, num(f.s) + "× con falla");
+  $("gSpeedup").replaceChildren(s);
+}
+
+function tarjetaEficiencia() {
+  const cont = $("efic"); cont.replaceChildren();
+  REF.forEach((r, i) => {
+    const fila = document.createElement("div"); fila.className = "efic-fila";
+    const n = document.createElement("span"); n.textContent = r.et;
+    const barra = document.createElement("div"); barra.className = "efic-barra";
+    const rel = document.createElement("div"); rel.style.width = (r.e * 100) + "%"; rel.style.background = COLORES[i];
+    barra.appendChild(rel);
+    const v = document.createElement("b"); v.textContent = num(r.e * 100, 1) + " %";
+    fila.append(n, barra, v); cont.appendChild(fila);
+  });
+}
+
+function dibujarTabla() {
+  const tb = $("tbodyRef"); tb.replaceChildren();
+  REF.forEach((r, i) => {
+    const p = propias ? propias[i] : null;
+    const celdas = [r.nombre, num(r.t) + " s", num(r.s) + "×", num(r.e * 100, 1) + " %",
+                    p ? num(p[2]) + " s" : "—", p ? num(p[4]) + "×" : "—", p ? num(p[5] * 100, 1) + " %" : "—"];
+    const tr = document.createElement("tr");
+    celdas.forEach((v, j) => {
+      const td = document.createElement("td"); td.textContent = v;
+      if (j >= 4 && p) td.className = "prop";
+      tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+  $("notaTabla").textContent = propias
+    ? "Las columnas de «Tu simulación» salen de tu última ejecución completa."
+    : "Ejecuta una simulación para ver aquí tus resultados junto a la referencia.";
+}
+
+const amdahl = (p, n) => 1 / ((1 - p) + p / n);
+const pDesde = (s, n) => (1 - 1 / s) / (1 - 1 / n);
+
+function dibujarAmdahl() {
+  const p = +$("sP").value / 100, n = +$("sN").value;
+  $("vP").textContent = Math.round(p * 100) + " %";
+  $("vN").textContent = n; $("lblN").textContent = n;
+  $("stTeorico").textContent = num(amdahl(p, n)) + "×";
+  $("stLimite").textContent = num(1 / (1 - p)) + "×";
+
+  const W = 520, H = 300, L = 44, R = 16, T = 30, B = 48;
+  const X = k => L + (W - L - R) * (k - 1) / 11;
+  const Y = v => T + (H - T - B) * (1 - v / 12);
+  const s = nuevoSvg(W, H);
+  sv(s, "text", {x: 6, y: 16, class: "svg-tit"}, "Teoría (línea azul) frente a lo medido (círculos naranja)");
+  for (let v = 0; v <= 12; v += 3) {
+    sv(s, "line", {x1: L, x2: W - R, y1: Y(v), y2: Y(v), class: "svg-grid"});
+    sv(s, "text", {x: L - 6, y: Y(v) + 4, "text-anchor": "end", class: "svg-eje"}, v);
+  }
+  [1, 2, 4, 6, 8, 10, 12].forEach(k => sv(s, "text", {x: X(k), y: H - B + 16, "text-anchor": "middle", class: "svg-eje"}, k));
+  sv(s, "text", {x: (L + W - R) / 2, y: H - 10, "text-anchor": "middle", class: "svg-eje"}, "Número de nodos");
+  sv(s, "line", {x1: X(1), y1: Y(1), x2: X(12), y2: Y(12), class: "svg-ideal"});
+  let d = "";
+  for (let k = 1; k <= 12.001; k += 0.25) d += (d ? " " : "") + X(k) + "," + Y(amdahl(p, k));
+  sv(s, "polyline", {points: d, fill: "none", stroke: "#1f4e8c", "stroke-width": 2.5});
+  REF.slice(0, 3).forEach(r => sv(s, "circle", {cx: X(r.nodos), cy: Y(r.s), r: 5, fill: "#fff", stroke: "#d9822b", "stroke-width": 2.5}));
+  if (propias) {
+    [0, 1, 2].forEach(i => sv(s, "circle", {cx: X(propias[i][1]), cy: Y(propias[i][4]), r: 4.5, fill: "#2e8b57"}));
+    sv(s, "text", {x: W - R, y: H - 10, "text-anchor": "end", class: "svg-eje", fill: "#2e8b57"}, "● Tu simulación");
+  }
+  sv(s, "circle", {cx: X(n), cy: Y(amdahl(p, n)), r: 6, fill: "#1f4e8c"});
+  $("gAmdahl").replaceChildren(s);
+
+  let t = `Modelo teórico (ley de Amdahl), no una medición. Los ${num(REF[2].s)}× medidos con 4 nodos en la referencia equivalen a una parte paralelizable de cerca del ${Math.round(pDesde(REF[2].s, 4) * 100)} %.`;
+  if (propias) {
+    const sp = propias[2][4], pp = pDesde(sp, 4);
+    t += pp > 0 && pp < 1
+      ? ` En tu simulación, los ${num(sp)}× con 4 nodos equivalen a cerca del ${Math.round(pp * 100)} %.`
+      : " En tu simulación no hubo una aceleración consistente con 4 nodos; prueba con más valores por archivo.";
+  }
+  $("notaAmdahl").textContent = t;
+}
+
+function ajustarALoMedido() {
+  let p = pDesde(REF[2].s, 4);
+  if (propias) { const pp = pDesde(propias[2][4], 4); if (pp > 0 && pp < 1) p = pp; }
+  $("sP").value = Math.min(99, Math.max(10, Math.round(p * 100)));
+  $("sN").value = 4;
+  dibujarAmdahl();
+}
+
+$("sP").addEventListener("input", dibujarAmdahl);
+$("sN").addEventListener("input", dibujarAmdahl);
+$("btnAjuste").addEventListener("click", ajustarALoMedido);
+graficaTiempos(); graficaSpeedup(); tarjetaEficiencia(); dibujarTabla(); ajustarALoMedido();
 </script>
 </body>
 </html>
